@@ -580,9 +580,6 @@ export default class UIManager {
                         <p>货架库存: ${furniture.currentStock || 0}</p>
                         <p>仓库库存: ${item.quantity}</p>
                         <p>成本: ${item.cost} | 售价: ${item.price}</p>
-                        <button class="pixel-btn small" onclick="window.game.ui.manualRestock('${furniture.type}', ${furniture.x}, ${furniture.y})">
-                            手动补货
-                        </button>
                     </div>
                     <hr>
                 `;
@@ -724,22 +721,6 @@ export default class UIManager {
             furniture.currentStock = 0;
             this.renderFurniturePanel(furniture);
             this.showDialog(`已设置为: ${itemId}`);
-        }
-    }
-
-    manualRestock(type, x, y) {
-        const furniture = this.game.state.shop.facilities.find(f =>
-            f.type === type && f.x === x && f.y === y
-        );
-
-        if (furniture) {
-            const restocked = this.game.state.shop.restockRack(furniture);
-            if (restocked > 0) {
-                this.renderFurniturePanel(furniture);
-                this.showDialog(`补货成功: +${restocked}`);
-            } else {
-                this.showDialog('仓库库存不足!');
-            }
         }
     }
 

@@ -1000,4 +1000,34 @@ export default class UIManager {
         `;
         document.body.appendChild(div);
     }
+    showFurnitureShop() {
+        const div = document.createElement('div');
+        div.className = 'screen active';
+        div.style.backgroundColor = 'rgba(0,0,0,0.8)';
+        div.style.zIndex = '300';
+        div.innerHTML = `
+            <div style="background: white; padding: 20px; border-radius: 10px; width: 320px; display: flex; flex-direction: column;">
+                <h3>家具商店</h3>
+                <div class="item-grid">
+                    <div class="item-card" onclick="window.game.state.addFurniture('rack'); this.closest('.screen').remove();">
+                        <div class="item-name">衣架</div>
+                        <div class="item-stats">价格: 200G</div>
+                        <div class="item-stats">用于展示服装</div>
+                    </div>
+                    <div class="item-card" onclick="window.game.state.addFurniture('shelf'); this.closest('.screen').remove();">
+                        <div class="item-name">货架</div>
+                        <div class="item-stats">价格: 300G</div>
+                        <div class="item-stats">用于展示配饰</div>
+                    </div>
+                    <div class="item-card" onclick="window.game.state.addFurniture('plant'); this.closest('.screen').remove();">
+                        <div class="item-name">盆栽</div>
+                        <div class="item-stats">价格: 50G</div>
+                        <div class="item-stats">装饰环境</div>
+                    </div>
+                </div>
+                <button class="pixel-btn" style="margin-top: 10px;" onclick="this.closest('.screen').remove()">关闭</button>
+            </div>
+        `;
+        document.body.appendChild(div);
+    }
 }

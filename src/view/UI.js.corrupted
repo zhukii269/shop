@@ -1,0 +1,760 @@
+export default class UIManager {
+    constructor(game) {
+        this.game = game;
+        this.displayedMoney = 0;
+        this.dialogQueue = [];
+        this.currentDialog = null;
+        this.screens = {
+            start: document.getElementById('start-screen'),
+            hud: document.getElementById('hud')
+        };
+        this.panels = {
+            manager: document.getElementById('manager-panel')
+        };
+        this.dialog = document.getElementById('dialog-box');
+    }
+
+    init() {
+        // Bind Buttons
+        document.getElementById('btn-new-game').addEventListener('click', () => {
+            this.showScreen('hud'); // Optimistic update
+            this.game.startNewGame();
+        });
+
+        document.getElementById('btn-load-game').addEventListener('click', () => {
+            this.game.loadGame();
+        });
+
+        document.getElementById('manager-panel-btn').addEventListener('click', () => {
+            this.togglePanel('manager');
+        });
+
+        // Pause Button (New)
+        const pauseBtn = document.createElement('button');
+        pauseBtn.id = 'btn-pause';
+        pauseBtn.className = 'pixel-btn';
+        pauseBtn.style.position = 'absolute';
+        pauseBtn.style.right = '15px';
+        pauseBtn.style.top = '15px';
+        pauseBtn.style.zIndex = '1000';
+        pauseBtn.textContent = '⏸️';
+        pauseBtn.onclick = () => this.game.togglePause();
+        document.body.appendChild(pauseBtn);
+
+        document.querySelector('.close-btn').addEventListener('click', () => {
+            this.panels.manager.classList.add('hidden');
+        });
+
+        // Tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                this.updateManagerPanel(e.target.dataset.tab);
+            });
+        });
+
+        // Dialog next button
+        document.getElementById('dialog-next').addEventListener('click', () => {
+            this.showNextDialog();
+        });
+
+        // Status Bar Legend
+        const topBar = document.querySelector('.top-bar');
+        if (topBar) {
+            topBar.style.cursor = 'pointer';
+            topBar.addEventListener('click', () => {
+                this.toggleStatusLegend();
+            });
+        }
+    }
+
+    showScreen(name) {
+        Object.values(this.screens).forEach(s => s.classList.add('hidden'));
+        if (this.screens[name]) {
+            this.screens[name].classList.remove('hidden');
+            this.screens[name].classList.add('active');
+        }
+    }
+
+    togglePanel(name) {
+        const panel = this.panels[name];
+        if (panel) {
+            panel.classList.toggle('hidden');
+            if (!panel.classList.contains('hidden')) {
+                this.updateManagerPanel('inventory'); // Default tab
+            }
+        }
+    }
+
+    updateManagerPanel(tab) {
+        const content = document.querySelector('.panel-content');
+        content.innerHTML = `<p>Loading ${tab}...</p>`;
+
+        if (tab === 'inventory') {
+            this.renderInventory(content);
+        } else if (tab === 'employee') {
+            this.renderEmployee(content);
+        } else if (tab === 'shop') {
+            this.renderShop(content);
+        } else {
+            content.innerHTML = `<p>${tab} 功能暂未开放</p>`;
+        }
+    }
+
+    renderInventory(container) {
+        const inventory = this.game.state.shop.inventory;
+        let html = '<div class="inventory-list">';
+        inventory.items.forEach(item => {
+            html += `
+                <div class="inv-item" style="border: 1px solid #777; padding: 5px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight:bold;">${item.name}</div>
+                        <div style="font-size: 12px;">库存: ${item.quantity} | 成本: ${item.cost} | 售价: ${item.price}</div>
+                    </div>
+                    <div>
+                        <button class="pixel-btn small" onclick="window.game.ui.handleRestock('${item.id}')">补货</button>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    handleRestock(itemId) {
+        const item = this.game.state.shop.inventory.items.find(i => i.id === itemId);
+        if (item) {
+            const cost = item.cost * 5; // Restock 5
+            if (this.game.state.shop.money >= cost) {
+                this.game.state.shop.money -= cost;
+
+                // Add to pending orders
+                this.game.state.shop.pendingOrders.push({ itemId: itemId, quantity: 5 });
+
+                this.updateManagerPanel('inventory');
+                this.updateHUD(this.game.state);
+                this.showDialog(`已下单 ${item.name} x5，花费 ${cost} 金币 (明日送达)`);
+            } else {
+                this.showDialog("资金不足！");
+            }
+        }
+    }
+
+    renderEmployee(container) {
+        const emp = this.game.state.employees[0];
+        if (!emp) return;
+
+        container.innerHTML = `
+            <div class="emp-details">
+                <h3>${emp.name} (Lv.${emp.level})</h3>
+                <p>岗位: ${emp.role}</p>
+                <p>经验: ${emp.xp}/${emp.xpToNextLevel}</p>
+                <p>效率: ${emp.efficiency}%</p>
+                <p>亲和力: ${emp.charisma}%</p>
+                <p>疲劳: ${Math.floor(emp.fatigue)}/100</p>
+                <hr>
+                <div style="margin-bottom: 10px;">
+                    <label>当前任务优先级:</label>
+                    <select id="emp-task-select" onchange="window.game.ui.handleTaskChange(this.value)">
+                        <option value="balanced" ${emp.taskPriority === 'balanced' ? 'selected' : ''}>均衡工作</option>
+                        <option value="guide" ${emp.taskPriority === 'guide' ? 'selected' : ''}>优先导购</option>
+                        <option value="cashier" ${emp.taskPriority === 'cashier' ? 'selected' : ''}>优先收银</option>
+                    </select>
+                </div>
+                <button class="pixel-btn small" onclick="window.game.ui.handleRest()">休息 (-20疲劳)</button>
+                <button class="pixel-btn small" onclick="window.game.ui.handleMotivate()">激励 (+10%效率)</button>
+            </div>
+        `;
+    }
+
+    renderShop(container) {
+        const shop = this.game.state.shop;
+        container.innerHTML = `
+            <div class="shop-details">
+                <h3>店铺信息</h3>
+                <p>明日天气预报: ${this.getWeatherEmoji(this.game.state.forecast)}</p>
+                <hr>
+                <p>等级: ${shop.level}</p>
+                <p>声望: ${shop.reputation}</p>
+                <p>客流: ${shop.traffic}</p>
+                <hr>
+                <h4>升级店铺</h4>
+                <p>下一级费用: ${shop.upgradeCost}</p>
+                <button class="pixel-btn" onclick="window.game.ui.handleUpgrade()">升级店铺</button>
+                <hr>
+                <h4>装修</h4>
+                <button class="pixel-btn" onclick="window.game.state.toggleEditMode(); window.game.ui.togglePanel('manager')">进入装修模式</button>
+            </div>
+        `;
+    }
+
+    handleUpgrade() {
+        const shop = this.game.state.shop;
+        if (shop.upgrade()) {
+            this.updateManagerPanel('shop');
+            this.updateHUD(this.game.state);
+            this.showDialog(`店铺升级成功！当前等级: ${shop.level}`);
+        } else {
+            this.showDialog(`资金不足！需要 ${shop.upgradeCost} 金币`);
+        }
+    }
+
+    handleTaskChange(val) {
+        const emp = this.game.state.employees[0];
+        emp.taskPriority = val;
+        this.showDialog(`小衣的工作重心调整为：${val === 'balanced' ? '均衡' : val === 'guide' ? '导购' : '收银'}`);
+    }
+
+    handleRest() {
+        const emp = this.game.state.employees[0];
+        if (emp.fatigue >= 20) {
+            emp.fatigue -= 20;
+            this.updateManagerPanel('employee');
+            this.showDialog("小衣休息了一会儿，精神多了！");
+        } else {
+            this.showDialog("小衣还不累呢。");
+        }
+    }
+
+    handleMotivate() {
+        if (this.game.state.shop.money >= 50) {
+            this.game.state.shop.money -= 50;
+            const emp = this.game.state.employees[0];
+            emp.efficiency += 10;
+            this.updateManagerPanel('employee');
+            this.updateHUD(this.game.state);
+            this.showDialog("晨会激励！小衣干劲十足！(效率+10%)");
+        } else {
+            this.showDialog("资金不足 (需要 50 金币)");
+        }
+    }
+
+    showDialog(text) {
+        // Add to queue
+        if (Array.isArray(text)) {
+            this.dialogQueue.push(...text);
+        } else {
+            this.dialogQueue.push(text);
+        }
+
+        // Start showing if not already showing
+        if (!this.currentDialog) {
+            this.showNextDialog();
+        }
+    }
+
+    showNextDialog() {
+        if (this.dialogQueue.length === 0) {
+            this.dialog.classList.add('hidden');
+            this.currentDialog = null;
+            return;
+        }
+
+        this.currentDialog = this.dialogQueue.shift();
+        this.dialog.classList.remove('hidden');
+        document.getElementById('dialog-text').textContent = this.currentDialog;
+    }
+
+    updateHUD(state) {
+        // Number Rolling
+        const diff = state.shop.money - this.displayedMoney;
+        if (Math.abs(diff) > 0) {
+            this.displayedMoney += Math.ceil(diff * 0.1); // Ease in
+        }
+        document.getElementById('money-display').textContent = this.displayedMoney;
+
+        document.getElementById('traffic-display').textContent = state.shop.traffic;
+
+        const seasonMap = { spring: '🌸', summer: '☀️', autumn: '🍂', winter: '❄️' };
+        document.getElementById('season-display').textContent = seasonMap[state.season] + ` Day ${state.day}`;
+
+        // Format time
+        const hours = Math.floor(state.time / 60);
+        const mins = Math.floor(state.time % 60);
+        const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+        document.getElementById('time-display').innerHTML = `<span style="color:#FFD700">⏰</span> ${timeStr}`;
+
+        // Update other stats with icons
+        document.getElementById('money-display').innerHTML = `<span style="color:#FFD700">💰</span> ${this.displayedMoney}`;
+
+        // Fix: Use dailyStats.visitors for real-time visitor count
+        document.getElementById('traffic-display').innerHTML = `<span style="color:#42A5F5">👥</span> ${state.dailyStats.visitors}`;
+
+        // New Stats
+        document.getElementById('sales-display').innerHTML = `<span style="color:#66BB6A">🛒</span> ${state.dailyStats.sales}`;
+        document.getElementById('revenue-display').innerHTML = `<span style="color:#FFA726">📈</span> ${state.dailyStats.revenue}`;
+
+        // Update Employee Status Window
+        const selectedEmp = this.game.selectedEntity;
+        const statusWindow = document.getElementById('employee-status');
+
+        if (selectedEmp && selectedEmp.constructor.name === 'Employee') {
+            statusWindow.classList.remove('hidden');
+            // Update content
+            statusWindow.querySelector('.status-header').textContent = selectedEmp.name;
+            document.getElementById('emp-task').textContent = selectedEmp.state;
+            document.getElementById('emp-efficiency').textContent = Math.floor(selectedEmp.efficiency) + '%';
+            document.getElementById('emp-fatigue').textContent = Math.floor(selectedEmp.fatigue) + '/100';
+        } else {
+            statusWindow.classList.add('hidden');
+        }
+    }
+
+    showDailySummary(stats, forecast) {
+        const weatherMap = { sunny: '☀️', cloudy: '☁️', rainy: '🌧️', snowy: '❄️' };
+        const div = document.createElement('div');
+        div.className = 'screen active';
+        div.style.backgroundColor = 'rgba(0,0,0,0.9)';
+        div.style.zIndex = '100';
+        div.innerHTML = `
+            <div style="text-align: center; color: white; padding: 20px;">
+                <h2>今日营业总结</h2>
+                <p>客流: ${stats.visitors}</p>
+                <p>成交: ${stats.sales}</p>
+                <p>营收: ${stats.revenue}</p>
+                <hr style="margin: 20px 0; border-color: #666;">
+                <h3>📅 明日天气预报</h3>
+                <p style="font-size: 32px;">${weatherMap[forecast]}</p>
+                <p style="font-size: 14px; color: #aaa;">晚间时段可继续补货和上架操作</p>
+                <br>
+                <button class="pixel-btn" onclick="this.closest('.screen').remove()">关闭</button>
+            </div>
+        `;
+        document.body.appendChild(div);
+    }
+
+    showEditorToolbar() {
+        // Hide other UI
+        document.getElementById('hud').classList.add('hidden');
+        document.getElementById('manager-panel-btn').classList.add('hidden');
+        const pauseBtn = document.getElementById('btn-pause');
+        if (pauseBtn) pauseBtn.style.display = 'none';
+
+        let toolbar = document.getElementById('editor-toolbar');
+        if (!toolbar) {
+            toolbar = document.createElement('div');
+            toolbar.id = 'editor-toolbar';
+            toolbar.style.position = 'absolute';
+            toolbar.style.bottom = '20px';
+            toolbar.style.left = '50%';
+            toolbar.style.transform = 'translateX(-50%)';
+            toolbar.style.background = 'rgba(255, 255, 255, 0.9)';
+            toolbar.style.padding = '10px';
+            toolbar.style.borderRadius = '12px';
+            toolbar.style.display = 'flex';
+            toolbar.style.gap = '10px';
+            toolbar.style.boxShadow = '0 4px 10px rgba(0,0,0,0.2)';
+            toolbar.innerHTML = `
+                <button class="pixel-btn small" onclick="window.game.state.toggleEditMode()">退出装修</button>
+                <div style="width: 1px; background: #ccc;"></div>
+                <button class="pixel-btn small" onclick="window.game.ui.showFurnitureShop()">➕ 添加家具</button>
+                <button class="pixel-btn small" style="background: #EF5350;" onclick="window.game.state.removeFurniture()">🗑️ 删除</button>
+            `;
+            document.body.appendChild(toolbar);
+        }
+        toolbar.classList.remove('hidden');
+    }
+
+    showFurnitureShop() {
+        const div = document.createElement('div');
+        div.className = 'screen active';
+        div.style.backgroundColor = 'rgba(0,0,0,0.8)';
+        div.style.zIndex = '200';
+        div.innerHTML = `
+            <div style="background: white; padding: 20px; border-radius: 10px; text-align: center; width: 300px;">
+                <h3>家具商店</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                    <div class="shop-item" onclick="window.game.state.addFurniture('rack'); this.closest('.screen').remove();">
+                        <div style="font-size: 24px;">👔</div>
+                        <div>衣架</div>
+                        <div style="color: gold;">200G</div>
+                    </div>
+                    <div class="shop-item" onclick="window.game.state.addFurniture('shelf'); this.closest('.screen').remove();">
+                        <div style="font-size: 24px;">📦</div>
+                        <div>货架</div>
+                        <div style="color: gold;">300G</div>
+                    </div>
+                    <div class="shop-item" onclick="window.game.state.addFurniture('plant'); this.closest('.screen').remove();">
+                        <div style="font-size: 24px;">🪴</div>
+                        <div>盆栽</div>
+                        <div style="color: gold;">50G</div>
+                    </div>
+                </div>
+                <br>
+                <button class="pixel-btn" onclick="this.closest('.screen').remove()">关闭</button>
+            </div>
+        `;
+        document.body.appendChild(div);
+    }
+
+    hideEditorToolbar() {
+        const toolbar = document.getElementById('editor-toolbar');
+        if (toolbar) {
+            toolbar.classList.add('hidden');
+        }
+
+        // Show other UI
+        document.getElementById('hud').classList.remove('hidden');
+        document.getElementById('manager-panel-btn').classList.remove('hidden');
+        const pauseBtn = document.getElementById('btn-pause');
+        if (pauseBtn) pauseBtn.style.display = 'block';
+    }
+    showFurniturePanel(furniture) {
+        const panel = document.getElementById('furniture-panel');
+        if (!panel) {
+            // Should be in HTML, but if not, we can't show it
+            console.error('Furniture panel not found in HTML');
+            return;
+        }
+
+        this.renderFurniturePanel(furniture);
+        panel.classList.remove('hidden');
+    }
+
+    renderFurniturePanel(furniture) {
+        const content = document.getElementById('furniture-panel-content');
+        if (!content) return;
+
+        const item = furniture.itemType ?
+            this.game.state.shop.inventory.items.find(i => i.id === furniture.itemType) :
+            null;
+
+        let html = `
+            <div class="furniture-info">
+                <h3>${furniture.type === 'rack' ? '衣架' : '货架'}</h3>
+                <p>位置: (${furniture.x}, ${furniture.y})</p>
+                <p>容量: ${furniture.currentStock || 0} / ${furniture.capacity || 10}</p>
+            </div>
+            <hr>
+        `;
+
+        if (item) {
+            html += `
+                <div class="current-item">
+                    <h4>当前商品</h4>
+                    <p><strong>${item.name}</strong></p>
+                    <p>货架库存: ${furniture.currentStock || 0}</p>
+                    <p>仓库库存: ${item.quantity}</p>
+                    <p>成本: ${item.cost} | 售价: ${item.price}</p>
+                    <button class="pixel-btn small" onclick="window.game.ui.manualRestock('${furniture.type}', ${furniture.x}, ${furniture.y})">
+                        手动补货
+                    </button>
+                </div>
+                <hr>
+            `;
+        }
+
+        html += `
+            <div class="item-selection">
+                <button class="pixel-btn" style="width:100%" onclick="window.game.ui.showItemSelector('${furniture.type}', ${furniture.x}, ${furniture.y})">
+                    更换展示商品
+                </button>
+            </div>
+        `;
+
+        content.innerHTML = html;
+    }
+
+    showItemSelector(type, x, y) {
+        const div = document.createElement('div');
+        div.className = 'screen active';
+        div.style.backgroundColor = 'rgba(0,0,0,0.8)';
+        div.style.zIndex = '300';
+        div.innerHTML = `
+            <div style="background: white; padding: 20px; border-radius: 10px; width: 320px; max-height: 80vh; display: flex; flex-direction: column;">
+                <h3>选择商品</h3>
+                <div style="flex: 1; overflow-y: auto; margin: 10px 0;">
+                    <div class="item-grid">
+                        ${this.game.state.shop.inventory.items.map(item => `
+                            <div class="item-card" onclick="window.game.ui.assignItemToFurniture('${type}', ${x}, ${y}, '${item.id}'); this.closest('.screen').remove();">
+                                <div class="item-name">${item.name}</div>
+                                <div class="item-stats">库存: ${item.quantity}</div>
+                                <div class="item-stats">售价: ${item.price}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <button class="pixel-btn" onclick="this.closest('.screen').remove()">取消</button>
+            </div>
+        `;
+        document.body.appendChild(div);
+    }
+
+    assignItemToFurniture(type, x, y, itemId) {
+        const furniture = this.game.state.shop.facilities.find(f =>
+            f.type === type && f.x === x && f.y === y
+        );
+
+        if (furniture) {
+            furniture.itemType = itemId;
+            furniture.currentStock = 0;  // Reset stock when changing item
+            this.renderFurniturePanel(furniture);
+            this.showDialog(`已设置为: ${itemId}`);
+        }
+    }
+
+    manualRestock(type, x, y) {
+        const furniture = this.game.state.shop.facilities.find(f =>
+            f.type === type && f.x === x && f.y === y
+        );
+
+        if (furniture) {
+            const restocked = this.game.state.shop.restockRack(furniture);
+            if (restocked > 0) {
+                this.renderFurniturePanel(furniture);
+                this.showDialog(`补货成功: +${restocked}`);
+            } else {
+                this.showDialog('仓库库存不足!');
+            }
+        }
+    }
+
+    getWeatherEmoji(weather) {
+        const map = { sunny: '☀️', cloudy: '☁️', rainy: '🌧️', snowy: '❄️' };
+        return map[weather] || weather;
+    }
+
+        `;
+        document.body.appendChild(div);
+    }
+
+    showEditorToolbar() {
+        // Hide other UI
+        document.getElementById('hud').classList.add('hidden');
+        document.getElementById('manager-panel-btn').classList.add('hidden');
+        const pauseBtn = document.getElementById('btn-pause');
+        if (pauseBtn) pauseBtn.style.display = 'none';
+
+        let toolbar = document.getElementById('editor-toolbar');
+        if (!toolbar) {
+            toolbar = document.createElement('div');
+            toolbar.id = 'editor-toolbar';
+            toolbar.style.position = 'absolute';
+            toolbar.style.bottom = '20px';
+            toolbar.style.left = '50%';
+            toolbar.style.transform = 'translateX(-50%)';
+            toolbar.style.background = 'rgba(255, 255, 255, 0.9)';
+            toolbar.style.padding = '10px';
+            toolbar.style.borderRadius = '12px';
+            toolbar.style.display = 'flex';
+            toolbar.style.gap = '10px';
+            toolbar.style.boxShadow = '0 4px 10px rgba(0,0,0,0.2)';
+            toolbar.innerHTML = `
+    < button class="pixel-btn small" onclick = "window.game.state.toggleEditMode()" > 退出装修</button >
+                <div style="width: 1px; background: #ccc;"></div>
+                <button class="pixel-btn small" onclick="window.game.ui.showFurnitureShop()">➕ 添加家具</button>
+                <button class="pixel-btn small" style="background: #EF5350;" onclick="window.game.state.removeFurniture()">🗑️ 删除</button>
+`;
+            document.body.appendChild(toolbar);
+        }
+        toolbar.classList.remove('hidden');
+    }
+
+    showFurnitureShop() {
+        const div = document.createElement('div');
+        div.className = 'screen active';
+        div.style.backgroundColor = 'rgba(0,0,0,0.8)';
+        div.style.zIndex = '200';
+        div.innerHTML = `
+    < div style = "background: white; padding: 20px; border-radius: 10px; text-align: center; width: 300px;" >
+                <h3>家具商店</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                    <div class="shop-item" onclick="window.game.state.addFurniture('rack'); this.closest('.screen').remove();">
+                        <div style="font-size: 24px;">👔</div>
+                        <div>衣架</div>
+                        <div style="color: gold;">200G</div>
+                    </div>
+                    <div class="shop-item" onclick="window.game.state.addFurniture('shelf'); this.closest('.screen').remove();">
+                        <div style="font-size: 24px;">📦</div>
+                        <div>货架</div>
+                        <div style="color: gold;">300G</div>
+                    </div>
+                    <div class="shop-item" onclick="window.game.state.addFurniture('plant'); this.closest('.screen').remove();">
+                        <div style="font-size: 24px;">🪴</div>
+                        <div>盆栽</div>
+                        <div style="color: gold;">50G</div>
+                    </div>
+                </div>
+                <br>
+                <button class="pixel-btn" onclick="this.closest('.screen').remove()">关闭</button>
+            </div>
+`;
+        document.body.appendChild(div);
+    }
+
+    hideEditorToolbar() {
+        const toolbar = document.getElementById('editor-toolbar');
+        if (toolbar) {
+            toolbar.classList.add('hidden');
+        }
+
+        // Show other UI
+        document.getElementById('hud').classList.remove('hidden');
+        document.getElementById('manager-panel-btn').classList.remove('hidden');
+        const pauseBtn = document.getElementById('btn-pause');
+        if (pauseBtn) pauseBtn.style.display = 'block';
+    }
+    showFurniturePanel(furniture) {
+        const panel = document.getElementById('furniture-panel');
+        if (!panel) {
+            // Should be in HTML, but if not, we can't show it
+            console.error('Furniture panel not found in HTML');
+            return;
+        }
+
+        this.renderFurniturePanel(furniture);
+        panel.classList.remove('hidden');
+    }
+
+    renderFurniturePanel(furniture) {
+        const content = document.getElementById('furniture-panel-content');
+        if (!content) return;
+
+        const item = furniture.itemType ?
+            this.game.state.shop.inventory.items.find(i => i.id === furniture.itemType) :
+            null;
+
+        let html = `
+    < div class="furniture-info" >
+                <h3>${furniture.type === 'rack' ? '衣架' : '货架'}</h3>
+                <p>位置: (${furniture.x}, ${furniture.y})</p>
+                <p>容量: ${furniture.currentStock || 0} / ${furniture.capacity || 10}</p>
+            </div >
+    <hr>
+        `;
+
+        if (item) {
+            html += `
+                <div class="current-item">
+                    <h4>当前商品</h4>
+                    <p><strong>${item.name}</strong></p>
+                    <p>货架库存: ${furniture.currentStock || 0}</p>
+                    <p>仓库库存: ${item.quantity}</p>
+                    <p>成本: ${item.cost} | 售价: ${item.price}</p>
+                    <button class="pixel-btn small" onclick="window.game.ui.manualRestock('${furniture.type}', ${furniture.x}, ${furniture.y})">
+                        手动补货
+                    </button>
+                </div>
+                <hr>
+            `;
+        }
+
+        html += `
+        <div class="item-selection">
+            <button class="pixel-btn" style="width:100%" onclick="window.game.ui.showItemSelector('${furniture.type}', ${furniture.x}, ${furniture.y})">
+                更换展示商品
+            </button>
+        </div>
+        `;
+
+        content.innerHTML = html;
+    }
+
+        showItemSelector(type, x, y) {
+        const div = document.createElement('div');
+        div.className = 'screen active';
+        div.style.backgroundColor = 'rgba(0,0,0,0.8)';
+        div.style.zIndex = '300';
+        div.innerHTML = `
+        <div style="background: white; padding: 20px; border-radius: 10px; width: 320px; max-height: 80vh; display: flex; flex-direction: column;">
+            <h3>选择商品</h3>
+            <div style="flex: 1; overflow-y: auto; margin: 10px 0;">
+                <div class="item-grid">
+                    ${this.game.state.shop.inventory.items.map(item => `
+                            <div class="item-card" onclick="window.game.ui.assignItemToFurniture('${type}', ${x}, ${y}, '${item.id}'); this.closest('.screen').remove();">
+                                <div class="item-name">${item.name}</div>
+                                <div class="item-stats">库存: ${item.quantity}</div>
+                                <div class="item-stats">售价: ${item.price}</div>
+                            </div>
+                        `).join('')}
+                </div>
+            </div>
+            <button class="pixel-btn" onclick="this.closest('.screen').remove()">取消</button>
+        </div>
+        `;
+        document.body.appendChild(div);
+    }
+
+        assignItemToFurniture(type, x, y, itemId) {
+        const furniture = this.game.state.shop.facilities.find(f =>
+        f.type === type && f.x === x && f.y === y
+        );
+
+        if (furniture) {
+            furniture.itemType = itemId;
+        furniture.currentStock = 0;  // Reset stock when changing item
+        this.renderFurniturePanel(furniture);
+        this.showDialog(`已设置为: ${itemId}`);
+        }
+    }
+
+        manualRestock(type, x, y) {
+        const furniture = this.game.state.shop.facilities.find(f =>
+        f.type === type && f.x === x && f.y === y
+        );
+
+        if (furniture) {
+            const restocked = this.game.state.shop.restockRack(furniture);
+            if (restocked > 0) {
+            this.renderFurniturePanel(furniture);
+        this.showDialog(`补货成功: +${restocked}`);
+            } else {
+            this.showDialog('仓库库存不足!');
+            }
+        }
+    }
+
+        getWeatherEmoji(weather) {
+        const map = {sunny: '☀️', cloudy: '☁️', rainy: '🌧️', snowy: '❄️' };
+        return map[weather] || weather;
+    }
+
+        toggleStatusLegend() {
+            let legend = document.getElementById('status-legend');
+        if (!legend) {
+            legend = document.createElement('div');
+        legend.id = 'status-legend';
+        legend.style.position = 'absolute';
+        legend.style.top = '60px';
+        legend.style.left = '50%';
+        legend.style.transform = 'translateX(-50%)';
+        legend.style.backgroundColor = 'rgba(255, 255, 255, 0.85)'; // Semi-transparent white
+        legend.style.color = '#333';
+        legend.style.padding = '6px 12px';
+        legend.style.borderRadius = '12px';
+        legend.style.zIndex = '2000';
+        legend.style.fontSize = '12px';
+        legend.style.border = '1px solid rgba(0, 0, 0, 0.1)';
+        legend.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+        legend.style.whiteSpace = 'nowrap';
+        legend.style.cursor = 'pointer';
+        legend.classList.add('hidden');
+
+            // Stop event propagation to prevent triggering status bar click
+            legend.addEventListener('click', (e) => {
+            e.stopPropagation();
+        this.toggleStatusLegend();
+            });
+
+        document.getElementById('hud').appendChild(legend);
+        }
+
+        if (legend.classList.contains('hidden')) {
+            // Update content
+            const state = this.game.state;
+
+        // Format time
+        const hours = Math.floor(state.time / 60);
+        const mins = Math.floor(state.time % 60);
+        const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+
+        // Single line, text only, no emojis
+        legend.textContent = `时间: ${timeStr} | 天气: ${state.weather} | 资金: ${Math.floor(state.shop.money)} | 客流: ${state.dailyStats.visitors} | 成交: ${state.dailyStats.sales} | 营收: ${state.dailyStats.revenue}`;
+
+        legend.classList.remove('hidden');
+        } else {
+            legend.classList.add('hidden');
+        }
+    }
+}

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>资源加载测试</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .test-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .test-item h3 {
+            margin: 0 0 10px 0;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .success {
+            background: #4caf50;
+            color: white;
+        }
+
+        .failed {
+            background: #f44336;
+            color: white;
+        }
+
+        .pending {
+            background: #ff9800;
+            color: white;
+        }
+
+        img {
+            max-width: 200px;
+            border: 2px solid #ddd;
+            margin-top: 10px;
+        }
+
+        .path {
+            font-family: monospace;
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>家具资源加载测试</h1>
+    <p>此页面用于测试家具图片是否能正确加载</p>
+
+    <div id="tests"></div>
+
+    <script>
+        const assets = [
+            { name: '衣架 (rack)', path: './assets/furniture/rack.png' },
+            { name: '货柜 (shelf)', path: './assets/furniture/clothing_counter.png' },
+            { name: '收银台 (counter)', path: './assets/furniture/counter.png' },
+            { name: '试衣间 (fitting_room)', path: './assets/furniture/fitting_room.png' }
+        ];
+
+        const container = document.getElementById('tests');
+
+        assets.forEach(asset => {
+            const div = document.createElement('div');
+            div.className = 'test-item';
+            div.innerHTML = `
+                <h3>${asset.name} <span class="status pending" id="status-${asset.name}">加载中...</span></h3>
+                <p>路径: <span class="path">${asset.path}</span></p>
+                <div id="img-${asset.name}"></div>
+            `;
+            container.appendChild(div);
+
+            const img = new Image();
+            img.onload = () => {
+                document.getElementById(`status-${asset.name}`).textContent = '✓ 成功';
+                document.getElementById(`status-${asset.name}`).className = 'status success';
+                document.getElementById(`img-${asset.name}`).appendChild(img);
+                console.log(`✅ ${asset.name} loaded successfully`);
+            };
+            img.onerror = () => {
+                document.getElementById(`status-${asset.name}`).textContent = '✗ 失败';
+                document.getElementById(`status-${asset.name}`).className = 'status failed';
+                document.getElementById(`img-${asset.name}`).innerHTML = `<p style="color: red;">无法加载图片</p>`;
+                console.error(`❌ ${asset.name} failed to load from ${asset.path}`);
+                console.error(`   Full URL attempted: ${img.src}`);
+            };
+            img.src = asset.path;
+        });
+    </script>
+</body>
+
+</html>

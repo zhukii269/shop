@@ -1,0 +1,324 @@
+export default class Assets {
+    constructor() {
+        this.images = {};
+
+        // Macaron Palette
+        this.colors = {
+            bg: '#FFF8E1',
+            primary: '#FFCCBC',
+            secondary: '#B3E5FC',
+            accent: '#FFF9C4',
+            text: '#5D4037',
+            skin: '#FFE0B2',
+            blush: '#FFAB91',
+            hair: {
+                brown: '#795548',
+                black: '#3E2723',
+                blonde: '#FFECB3'
+            },
+            clothes: {
+                pink: '#F8BBD0',
+                blue: '#B3E5FC',
+                yellow: '#FFF9C4',
+                green: '#C8E6C9',
+                white: '#FFFFFF'
+            }
+        };
+    }
+
+    async init() {
+        console.log('🎨 Assets initialization started...');
+
+        // 始终生成环境资源
+        this.generateTiles();
+        this.generateFurniture();
+        this.generateIcons();
+
+        // 尝试加载外部精灵图
+        let externalLoaded = false;
+        try {
+            await this.loadExternalSprites();
+            console.log('✅ External sprites loaded successfully');
+            externalLoaded = true;
+        } catch (error) {
+            console.warn('⚠️ Failed to load external sprites:', error.message);
+            console.error('Error details:', error);
+        }
+
+        // 如果外部加载失败,生成程序化角色
+        if (!externalLoaded) {
+            console.log('🎨 Using procedural asset generation');
+            this.generateCharacters();
+        }
+
+        console.log('✅ Assets initialization complete');
+    }
+
+    async loadExternalSprites() {
+        const spriteConfigs = [
+            { key: 'employee', path: './assets/characters/employee/employee.png', frameWidth: 32, frameHeight: 32, rows: 4, cols: 4 },
+            { key: 'customer_student', path: './assets/characters/customer/student.png', frameWidth: 32, frameHeight: 32, rows: 4, cols: 4 },
+            { key: 'customer_worker', path: './assets/characters/customer/worker.png', frameWidth: 32, frameHeight: 32, rows: 4, cols: 4 }
+        ];
+
+        const loadPromises = spriteConfigs.map(config => this.loadSpriteSheet(config));
+        await Promise.all(loadPromises);
+    }
+
+    async loadSpriteSheet(config) {
+        console.log(`🔄 Loading: ${config.key} from ${config.path}`);
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                console.log(`📥 Loaded: ${config.key} (${img.width}x${img.height})`);
+
+                this.images[config.key] = {
+                    image: img,
+                    frameWidth: config.frameWidth,
+                    frameHeight: config.frameHeight,
+                    rows: config.rows,
+                    cols: config.cols
+                };
+
+                // 创建帧引用
+                for (let frame = 0; frame < config.cols; frame++) {
+                    const frameName = config.key === 'customer_student' || config.key === 'customer_worker'
+                        ? `customer_idle_${frame}`
+                        : `${config.key}_idle_${frame}`;
+
+                    this.images[frameName] = {
+                        spriteSheet: config.key,
+                        frame: frame,
+                        direction: 0
+                    };
+                }
+
+                console.log(`✅ Sprite ready: ${config.key}`);
+                resolve(img);
+            };
+            img.onerror = (error) => {
+                console.error(`❌ Failed to load ${config.path}`);
+                reject(new Error(`Failed to load ${config.path}`));
+            };
+            img.src = config.path;
+        });
+    }
+
+    createCanvas(width, height) {
+        const c = document.createElement('canvas');
+        c.width = width;
+        c.height = height;
+        return c;
+    }
+
+    generateTiles() {
+        const floor = this.createCanvas(16, 16);
+        const ctxF = floor.getContext('2d');
+        ctxF.fillStyle = '#FFF8E1';
+        ctxF.fillRect(0, 0, 16, 16);
+        ctxF.fillStyle = '#FFEBEE';
+        this.drawHeart(ctxF, 8, 8, 4);
+        this.images['floor_light'] = floor;
+        this.images['floor'] = floor;
+
+        const floorDark = this.createCanvas(16, 16);
+        const ctxD = floorDark.getContext('2d');
+        ctxD.fillStyle = '#E1F5FE';
+        ctxD.fillRect(0, 0, 16, 16);
+        ctxD.fillStyle = '#B3E5FC';
+        ctxD.fillRect(0, 0, 8, 8);
+        ctxD.fillRect(8, 8, 8, 8);
+        this.images['floor_dark'] = floorDark;
+
+        const wall = this.createCanvas(16, 16);
+        const ctxW = wall.getContext('2d');
+        ctxW.fillStyle = '#FFECB3';
+        ctxW.fillRect(0, 0, 16, 16);
+        ctxW.fillStyle = '#FFE082';
+        ctxW.fillRect(0, 14, 16, 2);
+        ctxW.fillStyle = '#FFF';
+        ctxW.fillRect(4, 4, 2, 2);
+        ctxW.fillRect(10, 8, 2, 2);
+        this.images['wall'] = wall;
+    }
+
+    generateFurniture() {
+        const rack = this.createCanvas(32, 16);
+        const ctxR = rack.getContext('2d');
+        this.drawRoundedRect(ctxR, 2, 2, 28, 14, 4, '#D7CCC8', '#8D6E63');
+        const colors = [this.colors.clothes.pink, this.colors.clothes.blue, this.colors.clothes.yellow];
+        colors.forEach((color, i) => {
+            ctxR.fillStyle = color;
+            this.drawRoundedRect(ctxR, 6 + i * 8, 4, 6, 10, 2, color, null);
+        });
+        this.images['rack'] = rack;
+
+        const shelf = this.createCanvas(32, 16);
+        const ctxS = shelf.getContext('2d');
+        this.drawRoundedRect(ctxS, 0, 0, 32, 16, 4, '#D7CCC8', '#8D6E63');
+        ctxS.fillStyle = '#FFF9C4';
+        ctxS.beginPath(); ctxS.arc(8, 8, 3, 0, Math.PI * 2); ctxS.fill();
+        ctxS.fillStyle = '#B3E5FC';
+        ctxS.beginPath(); ctxS.arc(16, 8, 3, 0, Math.PI * 2); ctxS.fill();
+        ctxS.fillStyle = '#F8BBD0';
+        ctxS.beginPath(); ctxS.arc(24, 8, 3, 0, Math.PI * 2); ctxS.fill();
+        this.images['shelf'] = shelf;
+
+        const counter = this.createCanvas(16, 32);
+        const ctxC = counter.getContext('2d');
+        this.drawRoundedRect(ctxC, 0, 0, 16, 32, 4, '#FFE0B2', '#FFB74D');
+        ctxC.fillStyle = '#FFF';
+        ctxC.fillRect(3, 4, 10, 8);
+        this.images['counter'] = counter;
+
+        const fittingRoom = this.createCanvas(32, 32);
+        const ctxF = fittingRoom.getContext('2d');
+        this.drawRoundedRect(ctxF, 0, 0, 32, 32, 4, '#D7CCC8', '#8D6E63');
+        ctxF.fillStyle = '#F8BBD0';
+        ctxF.fillRect(2, 2, 28, 28);
+        ctxF.fillStyle = '#EF5350';
+        this.drawHeart(ctxF, 16, 10, 6);
+        this.images['fitting_room'] = fittingRoom;
+    }
+
+    generateCharacters() {
+        this.images['employee'] = this.createChibiSet('employee');
+        this.images['customer_a'] = this.createChibiSet('customer_student');
+    }
+
+    createChibiSet(type) {
+        const frames = [];
+        for (let i = 0; i < 4; i++) {
+            const canvas = this.createCanvas(32, 32);
+            const ctx = canvas.getContext('2d');
+            this.drawChibi(ctx, type, i);
+
+            const frameName = type === 'customer_student' ? 'customer' : type;
+            const key = `${frameName}_idle_${i}`;
+            this.images[key] = canvas;
+
+            frames.push(canvas);
+        }
+        return frames;
+    }
+
+    drawChibi(ctx, type, frame) {
+        const bounce = (frame === 1 || frame === 3) ? -1 : 0;
+        const centerX = 16;
+        const groundY = 28;
+
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.beginPath();
+        ctx.ellipse(centerX, groundY, 8, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const bodyY = groundY - 10 + bounce;
+
+        if (type === 'employee') {
+            ctx.fillStyle = '#FFE0B2';
+            this.drawRoundedRect(ctx, centerX - 6, bodyY, 12, 10, 4, '#FFCCBC', null);
+            ctx.fillStyle = '#FFF';
+            ctx.beginPath();
+            ctx.arc(centerX, bodyY + 4, 4, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.fillStyle = '#3949AB';
+            this.drawRoundedRect(ctx, centerX - 6, bodyY + 4, 12, 6, 2, '#3949AB', null);
+            ctx.fillStyle = '#FFF';
+            this.drawRoundedRect(ctx, centerX - 6, bodyY, 12, 6, 2, '#FFF', null);
+            ctx.fillStyle = '#E53935';
+            ctx.beginPath(); ctx.arc(centerX, bodyY + 2, 2, 0, Math.PI * 2); ctx.fill();
+        }
+
+        const headY = bodyY - 12;
+        const headSize = 14;
+
+        ctx.fillStyle = type === 'employee' ? this.colors.hair.brown : this.colors.hair.black;
+        ctx.beginPath();
+        ctx.arc(centerX, headY, headSize + 1, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = this.colors.skin;
+        ctx.beginPath();
+        ctx.arc(centerX, headY + 1, headSize, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = type === 'employee' ? this.colors.hair.brown : this.colors.hair.black;
+        ctx.beginPath();
+        ctx.arc(centerX, headY - 2, headSize, Math.PI, 0);
+        ctx.fill();
+
+        if (type === 'employee') {
+            ctx.fillStyle = '#EF5350';
+            this.drawHeart(ctx, centerX + 8, headY - 8, 4);
+        }
+
+        const eyeY = headY + 4;
+        const eyeX = 5;
+
+        ctx.fillStyle = '#5D4037';
+        ctx.beginPath(); ctx.arc(centerX - eyeX, eyeY, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(centerX + eyeX, eyeY, 2, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = 'rgba(255, 171, 145, 0.6)';
+        ctx.beginPath(); ctx.arc(centerX - eyeX - 2, eyeY + 3, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(centerX + eyeX + 2, eyeY + 3, 2, 0, Math.PI * 2); ctx.fill();
+
+        ctx.strokeStyle = '#5D4037';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(centerX, eyeY + 2, 2, 0, Math.PI);
+        ctx.stroke();
+    }
+
+    generateIcons() {
+        const coin = this.createCanvas(16, 16);
+        const ctx = coin.getContext('2d');
+        ctx.fillStyle = '#FFD54F';
+        ctx.beginPath(); ctx.arc(8, 8, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#FFF';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('$', 8, 9);
+        this.images['icon_coin'] = coin;
+    }
+
+    drawRoundedRect(ctx, x, y, w, h, r, fill, stroke) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+        if (fill) {
+            ctx.fillStyle = fill;
+            ctx.fill();
+        }
+        if (stroke) {
+            ctx.strokeStyle = stroke;
+            ctx.stroke();
+        }
+    }
+
+    drawHeart(ctx, x, y, size) {
+        ctx.beginPath();
+        ctx.moveTo(x, y + size / 4);
+        ctx.quadraticCurveTo(x, y, x + size / 2, y);
+        ctx.quadraticCurveTo(x + size, y, x + size, y + size / 2);
+        ctx.quadraticCurveTo(x + size, y + size, x, y + size * 1.5);
+        ctx.quadraticCurveTo(x - size, y + size, x - size, y + size / 2);
+        ctx.quadraticCurveTo(x - size, y, x - size / 2, y);
+        ctx.quadraticCurveTo(x, y, x, y + size / 4);
+        ctx.fill();
+    }
+
+    get(name) {
+        return this.images[name];
+    }
+}

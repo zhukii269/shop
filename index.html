@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>街角衣铺 - Street Corner Clothing Store</title>
+    <link rel="stylesheet" href="game.css">
+</head>
+
+<body>
+    <!-- Mobile Rotate Overlay -->
+    <div id="rotate-overlay">
+        <div class="rotate-message">
+            <div class="rotate-icon">↻</div>
+            <p>为了更好的体验，请旋转手机</p>
+            <p>Please rotate your device</p>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <canvas id="game-canvas" width="800" height="600"></canvas>
+
+        <div id="ui-layer">
+            <!-- Start Screen -->
+            <div id="start-screen" class="screen">
+                <div class="logo">
+                    <h1>街角衣铺</h1>
+                    <p>Street Corner Clothing Store</p>
+                </div>
+                <div class="menu-buttons">
+                    <button id="btn-new-game" class="pixel-btn">新游戏</button>
+                    <button id="btn-load-game" class="pixel-btn">加载存档</button>
+                </div>
+            </div>
+
+            <!-- HUD -->
+            <div id="hud" class="screen hidden">
+                <div class="top-bar">
+                    <div class="stat-item" id="time-display">09:30</div>
+                    <div class="stat-item" id="season-display">Spring (Day 1)</div>
+                    <div class="stat-item" id="weather-display">Sunny</div>
+                    <div class="stat-item" id="money-display">0</div>
+                    <div class="stat-item" id="traffic-display">0</div>
+                    <div class="stat-item" id="sales-display">成交: 0</div>
+                    <div class="stat-item" id="revenue-display">营收: 0</div>
+                </div>
+
+                <button id="manager-panel-btn" class="panel-toggle">店铺管理</button>
+            </div>
+
+            <!-- Manager Panel -->
+            <div id="manager-panel" class="panel hidden">
+                <div class="panel-header">
+                    <span>经理面板</span>
+                    <button class="close-btn">X</button>
+                </div>
+                <div class="panel-tabs">
+                    <button class="tab-btn active" data-tab="inventory">库存</button>
+                    <button class="tab-btn" data-tab="employee">员工</button>
+                    <button class="tab-btn" data-tab="shop">店铺</button>
+                    <button class="tab-btn" data-tab="system">系统</button>
+                </div>
+                <div class="panel-content">
+                    <!-- Dynamic Content -->
+                </div>
+            </div>
+
+            <!-- Furniture Configuration Panel -->
+            <div id="furniture-panel" class="panel hidden">
+                <div class="panel-header">
+                    <span id="furniture-panel-title">家具详情</span>
+                    <button class="close-btn"
+                        onclick="document.getElementById('furniture-panel').classList.add('hidden')">X</button>
+                </div>
+                <div class="panel-content" id="furniture-panel-content">
+                    <!-- Dynamic content -->
+                </div>
+            </div>
+
+            <!-- Dialog -->
+            <div id="dialog-box" class="dialog hidden">
+                <div class="dialog-content">
+                    <p id="dialog-text">...</p>
+                    <div id="dialog-next">▼</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Script -->
+    <script src="game.bundle.js"></script>
+</body>
+
+</html>

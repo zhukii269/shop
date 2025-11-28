@@ -145,8 +145,8 @@ export default class UIManager {
             this.renderEmployee(content);
         } else if (tab === 'shop') {
             this.renderShop(content);
-        } else if (tab === 'system') {
-            this.renderSystem(content);
+        } else if (tab === 'decoration') {
+            this.renderDecoration(content);
         } else {
             content.innerHTML = `<p>${tab} 功能暂未开放</p>`;
         }
@@ -237,8 +237,8 @@ export default class UIManager {
                 <p>下一级费用: ${shop.upgradeCost}</p>
                 <button class="pixel-btn" onclick="window.game.ui.handleUpgrade()">升级店铺</button>
                 <hr>
-                <h4>装修</h4>
-                <button class="pixel-btn" onclick="window.game.state.toggleEditMode(); window.game.ui.togglePanel('manager')">进入装修模式</button>
+                <h4>系统管理</h4>
+                <button class="pixel-btn" style="width: 100%; margin-bottom: 10px;" onclick="window.game.ui.showSaveSlotSelector()">保存游戏</button>
             </div>
         `;
     }
@@ -580,19 +580,6 @@ export default class UIManager {
                         <p>货架库存: ${furniture.currentStock || 0}</p>
                         <p>仓库库存: ${item.quantity}</p>
                         <p>成本: ${item.cost} | 售价: ${item.price}</p>
-                    </div>
-                    <hr>
-                `;
-            }
-
-            html += `
-                <div class="item-selection">
-                    <button class="pixel-btn" style="width:100%" onclick="window.game.ui.showItemSelector('${furniture.type}', ${furniture.x}, ${furniture.y})">
-                        更换展示商品
-                    </button>
-                </div>
-            `;
-        }
 
         content.innerHTML = html;
     }
@@ -640,7 +627,7 @@ export default class UIManager {
         }
 
         this.customerPanelContent.innerHTML = `
-            <h3 style="text-align:center; color:#5D4037; margin-top:0;">顾客详情</h3>
+                    < h3 style = "text-align:center; color:#5D4037; margin-top:0;" > 顾客详情</h3 >
             <div style="text-align:center; margin-bottom:10px;">
                 <div style="font-size: 24px;">👤</div>
             </div>
@@ -648,7 +635,7 @@ export default class UIManager {
             <p><strong>现金:</strong> ${customer.cash} G</p>
             <p><strong>好感度:</strong> ${heartStr}</p>
             <p><strong>状态:</strong> ${this.getCustomerStateText(customer.state)}</p>
-        `;
+                `;
     }
 
     hideCustomerPanel() {
@@ -692,7 +679,7 @@ export default class UIManager {
         div.style.backgroundColor = 'rgba(0,0,0,0.8)';
         div.style.zIndex = '300';
         div.innerHTML = `
-            <div style="background: white; padding: 20px; border-radius: 10px; width: 320px; max-height: 80vh; display: flex; flex-direction: column;">
+                    < div style = "background: white; padding: 20px; border-radius: 10px; width: 320px; max-height: 80vh; display: flex; flex-direction: column;" >
                 <h3>${title}</h3>
                 <div style="flex: 1; overflow-y: auto; margin: 10px 0;">
                     <div class="item-grid">
@@ -706,8 +693,8 @@ export default class UIManager {
                     </div>
                 </div>
                 <button class="pixel-btn" onclick="this.closest('.screen').remove()">取消</button>
-            </div>
-        `;
+            </div >
+                    `;
         document.body.appendChild(div);
     }
 
@@ -720,7 +707,7 @@ export default class UIManager {
             furniture.itemType = itemId;
             furniture.currentStock = 0;
             this.renderFurniturePanel(furniture);
-            this.showDialog(`已设置为: ${itemId}`);
+            this.showDialog(`已设置为: ${ itemId } `);
         }
     }
 
@@ -758,11 +745,11 @@ export default class UIManager {
         const state = this.game.state;
         const hours = Math.floor(state.time / 60);
         const mins = Math.floor(state.time % 60);
-        const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+        const timeStr = `${ hours.toString().padStart(2, '0') }:${ mins.toString().padStart(2, '0') } `;
         const seasonMap = { spring: '春季', summer: '夏季', autumn: '秋季', winter: '冬季' };
         const seasonName = seasonMap[state.season] || state.season;
 
-        legend.textContent = `时间: ${timeStr} | ${seasonName}第${state.day}天 | 天气: ${state.weather} | 资金: ${Math.floor(state.shop.money)} | 客流: ${state.dailyStats.visitors} | 成交: ${state.dailyStats.sales} | 营收: ${state.dailyStats.revenue}`;
+        legend.textContent = `时间: ${ timeStr } | ${ seasonName }第${ state.day } 天 | 天气: ${ state.weather } | 资金: ${ Math.floor(state.shop.money) } | 客流: ${ state.dailyStats.visitors } | 成交: ${ state.dailyStats.sales } | 营收: ${ state.dailyStats.revenue } `;
 
         legend.classList.remove('hidden');
         void legend.offsetWidth;
@@ -788,7 +775,7 @@ export default class UIManager {
         div.style.backgroundColor = 'rgba(0,0,0,0.9)';
         div.style.zIndex = '300';
         div.innerHTML = `
-            <div style="background: white; padding: 20px; border-radius: 10px; width: 400px; max-height: 80vh; display: flex; flex-direction: column;">
+                    < div style = "background: white; padding: 20px; border-radius: 10px; width: 400px; max-height: 80vh; display: flex; flex-direction: column;" >
                 <h3 style="margin-top: 0;">选择存档槽位</h3>
                 <div style="flex: 1; overflow-y: auto; margin: 10px 0;">
                     ${[1, 2, 3].map(slotId => {
@@ -807,14 +794,14 @@ export default class UIManager {
         }).join('')}
                 </div>
                 <button class="pixel-btn" onclick="this.closest('.screen').remove()">取消</button>
-            </div>
-        `;
+            </div >
+                    `;
         document.body.appendChild(div);
     }
 
     handleSaveToSlot(slotId) {
         if (this.game.state.saveGame(slotId)) {
-            this.showDialog(`游戏已保存到槽位 ${slotId}`);
+            this.showDialog(`游戏已保存到槽位 ${ slotId } `);
         }
     }
 
@@ -826,7 +813,7 @@ export default class UIManager {
         div.style.backgroundColor = 'rgba(0,0,0,0.9)';
         div.style.zIndex = '300';
         div.innerHTML = `
-            <div style="background: white; padding: 20px; border-radius: 10px; width: 400px; max-height: 80vh; display: flex; flex-direction: column;">
+                    < div style = "background: white; padding: 20px; border-radius: 10px; width: 400px; max-height: 80vh; display: flex; flex-direction: column;" >
                 <h3 style="margin-top: 0;">选择要加载的存档</h3>
                 <div style="flex: 1; overflow-y: auto; margin: 10px 0;">
                     ${[1, 2, 3].map(slotId => {
@@ -842,171 +829,151 @@ export default class UIManager {
         }).join('')}
                 </div>
                 <button class="pixel-btn" onclick="this.closest('.screen').remove()">取消</button>
-            </div>
-        `;
-        document.body.appendChild(div);
-    }
-
-    renderSystem(container) {
-        container.innerHTML = `
-            <div class="system-panel">
-                <h3>系统</h3>
-                <button class="pixel-btn" style="width: 100%; margin-bottom: 10px;" onclick="window.game.ui.showSaveSlotSelector()">保存游戏</button>
-                <hr>
-                <p style="font-size: 12px; color: #666;">提示: 游戏会在每天结束时自动保存到槽位1</p>
-            </div>
-        `;
-    }
-
-    showStatusLegend() {
-        let legend = document.getElementById('status-legend');
-        if (!legend) {
-            legend = document.createElement('div');
-            legend.id = 'status-legend';
-            legend.style.position = 'absolute';
-            legend.style.top = '60px';
-            legend.style.left = '50%';
-            legend.style.transform = 'translateX(-50%)';
-            legend.style.backgroundColor = 'rgba(255, 255, 255, 0.85)';
-            legend.style.color = '#333';
-            legend.style.padding = '6px 12px';
-            legend.style.borderRadius = '12px';
-            legend.style.zIndex = '2000';
-            legend.style.fontSize = '12px';
-            legend.style.border = '1px solid rgba(0, 0, 0, 0.1)';
-            legend.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-            legend.style.whiteSpace = 'nowrap';
-            legend.style.pointerEvents = 'none';
-            legend.style.transition = 'opacity 0.3s ease';
-            legend.style.opacity = '0';
-            legend.classList.add('hidden');
-
-            document.getElementById('hud').appendChild(legend);
-        }
-
-        const state = this.game.state;
-        const hours = Math.floor(state.time / 60);
-        const mins = Math.floor(state.time % 60);
-        const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-        const seasonMap = { spring: '春季', summer: '夏季', autumn: '秋季', winter: '冬季' };
-        const seasonName = seasonMap[state.season] || state.season;
-
-        legend.textContent = `时间: ${timeStr} | ${seasonName}第${state.day}天 | 天气: ${state.weather} | 资金: ${Math.floor(state.shop.money)} | 客流: ${state.dailyStats.visitors} | 成交: ${state.dailyStats.sales} | 营收: ${state.dailyStats.revenue}`;
-
-        legend.classList.remove('hidden');
-        void legend.offsetWidth;
-        legend.style.opacity = '1';
-
-        if (this.legendTimeout) {
-            clearTimeout(this.legendTimeout);
-        }
-
-        this.legendTimeout = setTimeout(() => {
-            legend.style.opacity = '0';
-            setTimeout(() => {
+                legend.id = 'status-legend';
+                legend.style.position = 'absolute';
+                legend.style.top = '60px';
+                legend.style.left = '50%';
+                legend.style.transform = 'translateX(-50%)';
+                legend.style.backgroundColor = 'rgba(255, 255, 255, 0.85)';
+                legend.style.color = '#333';
+                legend.style.padding = '6px 12px';
+                legend.style.borderRadius = '12px';
+                legend.style.zIndex = '2000';
+                legend.style.fontSize = '12px';
+                legend.style.border = '1px solid rgba(0, 0, 0, 0.1)';
+                legend.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                legend.style.whiteSpace = 'nowrap';
+                legend.style.pointerEvents = 'none';
+                legend.style.transition = 'opacity 0.3s ease';
+                legend.style.opacity = '0';
                 legend.classList.add('hidden');
-            }, 300);
-        }, 3000);
-    }
 
-    showSaveSlotSelector() {
-        const slots = this.game.state.getSaveSlots();
+                document.getElementById('hud').appendChild(legend);
+            }
 
-        const div = document.createElement('div');
-        div.className = 'screen active';
-        div.style.backgroundColor = 'rgba(0,0,0,0.9)';
-        div.style.zIndex = '300';
-        div.innerHTML = `
-            <div style="background: white; padding: 20px; border-radius: 10px; width: 400px; max-height: 80vh; display: flex; flex-direction: column;">
+            const state = this.game.state;
+            const hours = Math.floor(state.time / 60);
+            const mins = Math.floor(state.time % 60);
+            const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')} `;
+            const seasonMap = { spring: '春季', summer: '夏季', autumn: '秋季', winter: '冬季' };
+            const seasonName = seasonMap[state.season] || state.season;
+
+            legend.textContent = `时间: ${timeStr} | ${seasonName}第${state.day} 天 | 天气: ${state.weather} | 资金: ${Math.floor(state.shop.money)} | 客流: ${state.dailyStats.visitors} | 成交: ${state.dailyStats.sales} | 营收: ${state.dailyStats.revenue} `;
+
+            legend.classList.remove('hidden');
+            void legend.offsetWidth;
+            legend.style.opacity = '1';
+
+            if (this.legendTimeout) {
+                clearTimeout(this.legendTimeout);
+            }
+
+            this.legendTimeout = setTimeout(() => {
+                legend.style.opacity = '0';
+                setTimeout(() => {
+                    legend.classList.add('hidden');
+                }, 300);
+            }, 3000);
+        }
+
+        showSaveSlotSelector() {
+            const slots = this.game.state.getSaveSlots();
+
+            const div = document.createElement('div');
+            div.className = 'screen active';
+            div.style.backgroundColor = 'rgba(0,0,0,0.9)';
+            div.style.zIndex = '300';
+            div.innerHTML = `
+                    < div style = "background: white; padding: 20px; border-radius: 10px; width: 400px; max-height: 80vh; display: flex; flex-direction: column;" >
                 <h3 style="margin-top: 0;">选择存档槽位</h3>
                 <div style="flex: 1; overflow-y: auto; margin: 10px 0;">
                     ${[1, 2, 3].map(slotId => {
-            const slot = slots[slotId];
-            let slotInfo = '空存档';
-            if (slot) {
-                slotInfo = `第 ${slot.day} 天 - 资金: ${slot.money}`;
-            }
-            return `
+                const slot = slots[slotId];
+                let slotInfo = '空存档';
+                if (slot) {
+                    slotInfo = `第 ${slot.day} 天 - 资金: ${slot.money}`;
+                }
+                return `
                             <div class="save-slot" style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; cursor: pointer; border-radius: 5px; background: #f9f9f9;"
                                  onclick="window.game.ui.handleSaveToSlot(${slotId}); this.closest('.screen').remove();">
                                 <div style="font-weight: bold;">存档 ${slotId}</div>
                                 <div style="color: #666; font-size: 12px;">${slotInfo}</div>
                             </div>
                         `;
-        }).join('')}
+            }).join('')}
                 </div>
                 <button class="pixel-btn" onclick="this.closest('.screen').remove()">取消</button>
-            </div>
-        `;
-        document.body.appendChild(div);
-    }
-
-    handleSaveToSlot(slotId) {
-        if (this.game.state.saveGame(slotId)) {
-            this.showDialog(`游戏已保存到槽位 ${slotId}`);
+            </div >
+                    `;
+            document.body.appendChild(div);
         }
-    }
 
-    showLoadSlotSelector() {
-        const slots = this.game.state.getSaveSlots();
+        handleSaveToSlot(slotId) {
+            if (this.game.state.saveGame(slotId)) {
+                this.showDialog(`游戏已保存到槽位 ${slotId} `);
+            }
+        }
 
-        const div = document.createElement('div');
-        div.className = 'screen active';
-        div.style.backgroundColor = 'rgba(0,0,0,0.9)';
-        div.style.zIndex = '300';
-        div.innerHTML = `
-            <div style="background: white; padding: 20px; border-radius: 10px; width: 400px; max-height: 80vh; display: flex; flex-direction: column;">
+        showLoadSlotSelector() {
+            const slots = this.game.state.getSaveSlots();
+
+            const div = document.createElement('div');
+            div.className = 'screen active';
+            div.style.backgroundColor = 'rgba(0,0,0,0.9)';
+            div.style.zIndex = '300';
+            div.innerHTML = `
+                    < div style = "background: white; padding: 20px; border-radius: 10px; width: 400px; max-height: 80vh; display: flex; flex-direction: column;" >
                 <h3 style="margin-top: 0;">选择要加载的存档</h3>
                 <div style="flex: 1; overflow-y: auto; margin: 10px 0;">
 
                     ${(() => {
-                const allSlots = ['auto', 1, 2, 3];
-                return allSlots.map(slotId => {
-                    const slot = slots[slotId];
-                    const isAuto = slotId === 'auto';
+                    const allSlots = ['auto', 1, 2, 3];
+                    return allSlots.map(slotId => {
+                        const slot = slots[slotId];
+                        const isAuto = slotId === 'auto';
 
-                    // If manual slot is empty, skip it (keep existing behavior for manual slots)
-                    if (!isAuto && !slot) return '';
+                        // If manual slot is empty, skip it (keep existing behavior for manual slots)
+                        if (!isAuto && !slot) return '';
 
-                    const displayName = isAuto ? '自动存档' : `存档 ${slotId}`;
-                    const style = isAuto ? 'border: 2px solid #4CAF50; background: #E8F5E9;' : 'border: 1px solid #ccc; background: #f9f9f9;';
+                        const displayName = isAuto ? '自动存档' : `存档 ${slotId}`;
+                        const style = isAuto ? 'border: 2px solid #4CAF50; background: #E8F5E9;' : 'border: 1px solid #ccc; background: #f9f9f9;';
 
-                    // Handle string slotId for onclick
-                    const loadArg = isAuto ? "'auto'" : slotId;
+                        // Handle string slotId for onclick
+                        const loadArg = isAuto ? "'auto'" : slotId;
 
-                    let slotInfo = '<span style="color: #999;">(空)</span>';
-                    let onClick = '';
+                        let slotInfo = '<span style="color: #999;">(空)</span>';
+                        let onClick = '';
 
-                    if (slot) {
-                        slotInfo = `第 ${slot.day} 天 - 资金: ${slot.money}`;
-                        onClick = `onclick="window.game.loadGame(${loadArg}); this.closest('.screen').remove();"`;
-                    } else if (isAuto) {
-                        // Empty auto slot is not clickable
-                        onClick = `onclick="window.game.ui.showDialog('暂无自动存档');"`;
-                    }
+                        if (slot) {
+                            slotInfo = `第 ${slot.day} 天 - 资金: ${slot.money}`;
+                            onClick = `onclick="window.game.loadGame(${loadArg}); this.closest('.screen').remove();"`;
+                        } else if (isAuto) {
+                            // Empty auto slot is not clickable
+                            onClick = `onclick="window.game.ui.showDialog('暂无自动存档');"`;
+                        }
 
-                    return `
+                        return `
                                 <div class="save-slot" style="${style} padding: 10px; margin-bottom: 10px; cursor: pointer; border-radius: 5px;"
                                      ${onClick}>
                                     <div style="font-weight: bold;">${displayName}</div>
                                     <div style="color: #666; font-size: 12px;">${slotInfo}</div>
                                 </div>
                             `;
-                }).join('');
-            })()}
+                    }).join('');
+                })()}
                 </div>
                 <button class="pixel-btn" onclick="this.closest('.screen').remove()">取消</button>
-            </div>
-        `;
-        document.body.appendChild(div);
-    }
-    showFurnitureShop() {
-        const div = document.createElement('div');
-        div.className = 'screen active';
-        div.style.backgroundColor = 'rgba(0,0,0,0.8)';
-        div.style.zIndex = '300';
-        div.innerHTML = `
-            <div style="background: white; padding: 20px; border-radius: 10px; width: 320px; display: flex; flex-direction: column;">
+            </div >
+                    `;
+            document.body.appendChild(div);
+        }
+        showFurnitureShop() {
+            const div = document.createElement('div');
+            div.className = 'screen active';
+            div.style.backgroundColor = 'rgba(0,0,0,0.8)';
+            div.style.zIndex = '300';
+            div.innerHTML = `
+                    < div style = "background: white; padding: 20px; border-radius: 10px; width: 320px; display: flex; flex-direction: column;" >
                 <h3>家具商店</h3>
                 <div class="item-grid">
                     <div class="item-card" onclick="window.game.state.addFurniture('rack'); this.closest('.screen').remove();">
@@ -1026,8 +993,8 @@ export default class UIManager {
                     </div>
                 </div>
                 <button class="pixel-btn" style="margin-top: 10px;" onclick="this.closest('.screen').remove()">关闭</button>
-            </div>
-        `;
-        document.body.appendChild(div);
+            </div >
+                    `;
+            document.body.appendChild(div);
+        }
     }
-}
